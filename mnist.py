@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-%matplotlib inline
+# %matplotlib inline
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
@@ -322,6 +322,4 @@ np.savetxt('submission_softmax.csv',
            header = 'ImageId,Label', 
            comments = '', 
            fmt='%d')
-
-
 
