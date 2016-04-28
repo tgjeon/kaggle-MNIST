@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 
 # %matplotlib inline
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
+#import matplotlib.pyplot as plt
+#import matplotlib.cm as cm
 
 import tensorflow as tf
 
@@ -47,16 +47,16 @@ image_width = image_height = np.ceil(np.sqrt(image_size)).astype(np.uint8)
 print ('image_width => {0}\nimage_height => {1}'.format(image_width,image_height))
 
 # display image
-def display(img):
+#def display(img):
     
     # (784) => (28,28)
-    one_image = img.reshape(image_width,image_height)
+#    one_image = img.reshape(image_width,image_height)
     
-    plt.axis('off')
-    plt.imshow(one_image, cmap=cm.binary)
+#    plt.axis('off')
+#    plt.imshow(one_image, cmap=cm.binary)
 
 # output image     
-display(images[IMAGE_TO_DISPLAY])
+#display(images[IMAGE_TO_DISPLAY])
 
 labels_flat = data[[0]].values.ravel()
 
@@ -290,7 +290,7 @@ if(VALIDATION_SIZE):
 
 
 # read test data from CSV file 
-test_images = pd.read_csv('../input/test.csv').values
+test_images = pd.read_csv('./input/test.csv').values
 test_images = test_images.astype(np.float)
 
 # convert from [0:255] => [0.0:1.0]
