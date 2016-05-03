@@ -259,7 +259,7 @@ for i in range(0,test_images.shape[0]//BATCH_SIZE):
 
 
 # save results
-np.savetxt('submission_softmax.csv', 
+np.savetxt('submission.csv', 
            np.c_[range(1,len(test_images)+1),predicted_lables], 
            delimiter=',', 
            header = 'ImageId,Label', 
