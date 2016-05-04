@@ -19,7 +19,326 @@
     </section>
 
     <section class="main-content">
-      <p>On Draft</p>
+      <h1>
+<a id="classifying-mnist-digits-using-convolutional-neural-networks" class="anchor" href="#classifying-mnist-digits-using-convolutional-neural-networks" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Classifying MNIST digits using Convolutional Neural Networks</h1>
+
+<p>In this project, I show how TensorFlow can be used to implement convolutional neural networks.
+Also, I briefly introduce basic concepts of convolutional neural networks.
+The mathematical notations and its mapping TensowFlow graphs can be seen at below.
+The accuracy of this model for Kaggle competition: <strong>0.99</strong></p>
+
+<h2>
+<a id="mnist-dataset" class="anchor" href="#mnist-dataset" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>MNIST dataset</h2>
+
+<blockquote>
+<p>The MNIST database (Mixed National Institute of Standards and Technology database) is a large database of handwritten digits that is commonly used for training various image processing systems. The database is also widely used for training and testing in the field of machine learning. It was created by "re-mixing" the samples from NIST's original datasets. The creators felt that since NIST's training dataset was taken from American Census Bureau employees, while the testing dataset was taken from American high school students, NIST's complete dataset was too hard.[5] Furthermore, the black and white images from NIST were normalized to fit into a 20x20 pixel bounding box and anti-aliased, which introduced grayscale levels.</p>
+
+<p>The MNIST database contains 60,000 training images and 10,000 testing images. Half of the training set and half of the test set were taken from NIST's training dataset, while the other half of the training set and the other half of the test set were taken from NIST's testing dataset. There have been a number of scientific papers on attempts to achieve the lowest error rate; one paper, using a hierarchical system of convolutional neural networks, manages to get an error rate on the MNIST database of 0.23 percent. The original creators of the database keep a list of some of the methods tested on it. In their original paper, they use a support vector machine to get an error rate of 0.8 percent. -- "Wikipedia: MNIST database"</p>
+</blockquote>
+
+<h2>
+<a id="kaggle-competition-on-digit-recognizer" class="anchor" href="#kaggle-competition-on-digit-recognizer" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Kaggle competition on digit recognizer</h2>
+
+<p>*<em>Link: <a href="https://www.kaggle.com/c/digit-recognizer">https://www.kaggle.com/c/digit-recognizer</a> *</em></p>
+
+<p>The goal in this competition is to take an image of a handwritten single digit, and determine what that digit is.  As the competition progresses, we will release tutorials which explain different machine learning algorithms and help you to get started.</p>
+
+<p>The data for this competition were taken from the MNIST dataset. The MNIST ("Modified National Institute of Standards and Technology") dataset is a classic within the Machine Learning community that has been extensively studied.  More detail about the dataset, including Machine Learning algorithms that have been tried on it and their levels of success, can be found at <a href="http://yann.lecun.com/exdb/mnist/index.html">http://yann.lecun.com/exdb/mnist/index.html</a>.</p>
+
+<h3>
+<a id="competition-dataset" class="anchor" href="#competition-dataset" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Competition dataset</h3>
+
+<p>The data files train.csv and test.csv contain gray-scale images of hand-drawn digits, from zero through nine.</p>
+
+<p>Each image is 28 pixels in height and 28 pixels in width, for a total of 784 pixels in total. Each pixel has a single pixel-value associated with it, indicating the lightness or darkness of that pixel, with higher numbers meaning darker. This pixel-value is an integer between 0 and 255, inclusive.</p>
+
+<p>The training data set, (train.csv), has 785 columns. The first column, called "label", is the digit that was drawn by the user. The rest of the columns contain the pixel-values of the associated image.</p>
+
+<p>Each pixel column in the training set has a name like pixelx, where x is an integer between 0 and 783, inclusive. To locate this pixel on the image, suppose that we have decomposed x as x = i * 28 + j, where i and j are integers between 0 and 27, inclusive. Then pixelx is located on row i and column j of a 28 x 28 matrix, (indexing by zero).</p>
+
+<p>For example, pixel31 indicates the pixel that is in the fourth column from the left, and the second row from the top, as in the ascii-diagram below.</p>
+
+<p>Visually, if we omit the "pixel" prefix, the pixels make up the image like this:</p>
+
+<pre><code>000 001 002 003 ... 026 027
+028 029 030 031 ... 054 055
+056 057 058 059 ... 082 083
+ |   |   |   |  ...  |   |
+728 729 730 731 ... 754 755
+756 757 758 759 ... 782 783 
+</code></pre>
+
+<p>The test data set, (test.csv), is the same as the training set, except that it does not contain the "label" column.</p>
+
+<p>Your submission file should be in the following format: For each of the 28000 images in the test set, output a single line with the digit you predict. For example, if you predict that the first image is of a 3, the second image is of a 7, and the third image is of a 8, then your submission file would look like:</p>
+
+<pre><code>3
+7
+8
+(27997 more lines)
+</code></pre>
+
+<p>The evaluation metric for this contest is the categorization accuracy, or the proportion of test images that are correctly classified. For example, a categorization accuracy of 0.97 indicates that you have correctly classified all but 3% of the images.</p>
+
+<h3>
+<a id="libraries-and-settings" class="anchor" href="#libraries-and-settings" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Libraries and settings</h3>
+
+<div class="highlight highlight-source-python"><pre><span class="pl-k">import</span> numpy <span class="pl-k">as</span> np
+<span class="pl-k">import</span> pandas <span class="pl-k">as</span> pd
+
+<span class="pl-k">import</span> tensorflow <span class="pl-k">as</span> tf
+
+<span class="pl-c"># Parameters</span>
+<span class="pl-c1">LEARNING_RATE</span> <span class="pl-k">=</span> <span class="pl-c1">0.001</span>
+<span class="pl-c1">TRAINING_EPOCHS</span> <span class="pl-k">=</span> <span class="pl-c1">3000</span>
+<span class="pl-c1">BATCH_SIZE</span> <span class="pl-k">=</span> <span class="pl-c1">100</span>
+<span class="pl-c1">DISPLAY_STEP</span> <span class="pl-k">=</span> <span class="pl-c1">10</span>
+<span class="pl-c1">DROPOUT_CONV</span> <span class="pl-k">=</span> <span class="pl-c1">0.8</span>
+<span class="pl-c1">DROPOUT_HIDDEN</span> <span class="pl-k">=</span> <span class="pl-c1">0.6</span>
+<span class="pl-c1">VALIDATION_SIZE</span> <span class="pl-k">=</span> <span class="pl-c1">2000</span>      <span class="pl-c"># Set to 0 to train on all available data</span></pre></div>
+
+<h3>
+<a id="data-preparation" class="anchor" href="#data-preparation" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Data preparation</h3>
+
+<p>To start, we read given train and test data from each csv file. At first we read train.csv file.</p>
+
+<div class="highlight highlight-source-python"><pre><span class="pl-c"># Read MNIST data set (Train data from CSV file)</span>
+data <span class="pl-k">=</span> pd.read_csv(<span class="pl-s"><span class="pl-pds">'</span>./input/train.csv<span class="pl-pds">'</span></span>)</pre></div>
+
+<p>The data contains label and written images for number. <code>[label pixel_0, pixel_1, ... , pixel_784]</code>
+So, we split data into label and image from each row.</p>
+
+<div class="highlight highlight-source-python"><pre><span class="pl-c"># Extracting images and labels from given data</span>
+<span class="pl-c"># For images</span>
+images <span class="pl-k">=</span> data.iloc[:,<span class="pl-c1">1</span>:].values
+images <span class="pl-k">=</span> images.astype(np.float)
+
+<span class="pl-c"># For labels</span>
+labels_flat <span class="pl-k">=</span> data[[<span class="pl-c1">0</span>]].values.ravel()
+labels_count <span class="pl-k">=</span> np.unique(labels_flat).shape[<span class="pl-c1">0</span>]</pre></div>
+
+<p>For easy implementation of output layer, we convert label with number into ont-hot-vector.
+You can refer the idea of one-hot on this <a href="https://en.wikipedia.org/wiki/One-hot">link</a>.</p>
+
+<p>For example, we convert the numbers as follow: 
+<code>0:[1 0 0 0 0 0 0 0 0 0]</code>
+<code>1:[0 1 0 0 0 0 0 0 0 0]</code>
+...
+<code>9:[0 0 0 0 0 0 0 0 0 1]</code></p>
+
+<div class="highlight highlight-source-python"><pre>labels <span class="pl-k">=</span> dense_to_one_hot(labels_flat, labels_count)
+labels <span class="pl-k">=</span> labels.astype(np.uint8)</pre></div>
+
+<div class="highlight highlight-source-python"><pre><span class="pl-k">def</span> <span class="pl-en">dense_to_one_hot</span>(<span class="pl-smi">labels_dense</span>, <span class="pl-smi">num_classes</span>):
+    num_labels <span class="pl-k">=</span> labels_dense.shape[<span class="pl-c1">0</span>]
+    index_offset <span class="pl-k">=</span> np.arange(num_labels) <span class="pl-k">*</span> num_classes
+    labels_one_hot <span class="pl-k">=</span> np.zeros((num_labels, num_classes))
+    labels_one_hot.flat[index_offset <span class="pl-k">+</span> labels_dense.ravel()] <span class="pl-k">=</span> <span class="pl-c1">1</span>
+    <span class="pl-k">return</span> labels_one_hot</pre></div>
+
+<p>Then we normalize the intensity of each pixel from [0:255] into [0.0:1:0]</p>
+
+<div class="highlight highlight-source-python"><pre><span class="pl-c"># Normalize from [0:255] =&gt; [0.0:1.0]</span>
+images <span class="pl-k">=</span> np.multiply(images, <span class="pl-c1">1.0</span> <span class="pl-k">/</span> <span class="pl-c1">255.0</span>)
+image_size <span class="pl-k">=</span> images.shape[<span class="pl-c1">1</span>]
+image_width <span class="pl-k">=</span> image_height <span class="pl-k">=</span> np.ceil(np.sqrt(image_size)).astype(np.uint8)</pre></div>
+
+<p>Before applying our trained model to test data, we validate our trained model using validation dataset.
+So, we split training data into [train, validation].</p>
+
+<div class="highlight highlight-source-python"><pre><span class="pl-c"># Split data into training &amp; validation</span>
+validation_images <span class="pl-k">=</span> images[:<span class="pl-c1">VALIDATION_SIZE</span>]
+validation_labels <span class="pl-k">=</span> labels[:<span class="pl-c1">VALIDATION_SIZE</span>]
+
+train_images <span class="pl-k">=</span> images[<span class="pl-c1">VALIDATION_SIZE</span>:]
+train_labels <span class="pl-k">=</span> labels[<span class="pl-c1">VALIDATION_SIZE</span>:]
+</pre></div>
+
+<h3>
+<a id="create-cnn-model-with-tensorflow-graph" class="anchor" href="#create-cnn-model-with-tensorflow-graph" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Create CNN model with TensorFlow graph</h3>
+
+<p>We start creating cnn model with definition of input and output.
+This model handle each image and make decision for the image with digit classes [0-9].</p>
+
+<div class="highlight highlight-source-python"><pre><span class="pl-c"># Create Input and Output</span>
+<span class="pl-c1">X</span> <span class="pl-k">=</span> tf.placeholder(<span class="pl-s"><span class="pl-pds">'</span>float<span class="pl-pds">'</span></span>, <span class="pl-v">shape</span><span class="pl-k">=</span>[<span class="pl-c1">None</span>, image_size])       <span class="pl-c"># mnist data image of shape 28*28=784</span>
+<span class="pl-c1">Y_gt</span> <span class="pl-k">=</span> tf.placeholder(<span class="pl-s"><span class="pl-pds">'</span>float<span class="pl-pds">'</span></span>, <span class="pl-v">shape</span><span class="pl-k">=</span>[<span class="pl-c1">None</span>, labels_count])    <span class="pl-c"># 0-9 digits recognition =&gt; 10 classes</span></pre></div>
+
+<p>Using below functions, we can generate weight and bias easily.
+Basically, the simple weight and bias are generated on normal distribution.
+For better result, we implemented Xavier's initialization with input and output connections.
+For the detail explanation, you can refer two blogs: <a href="http://deepdish.io/2015/02/24/network-initialization/">deepdish</a> and <a href="http://andyljones.tumblr.com/post/110998971763/an-explanation-of-xavier-initialization">andyljones</a>.</p>
+
+<div class="highlight highlight-source-python"><pre><span class="pl-c"># Weight initialization</span>
+<span class="pl-k">def</span> <span class="pl-en">weight_variable</span>(<span class="pl-smi">shape</span>):
+    initial <span class="pl-k">=</span> tf.truncated_normal(shape, <span class="pl-v">stddev</span><span class="pl-k">=</span><span class="pl-c1">0.1</span>)
+    <span class="pl-k">return</span> tf.Variable(initial)
+
+<span class="pl-c"># Weight initialization (Xavier's init)</span>
+<span class="pl-k">def</span> <span class="pl-en">weight_xavier_init</span>(<span class="pl-smi">n_inputs</span>, <span class="pl-smi">n_outputs</span>, <span class="pl-smi">uniform</span><span class="pl-k">=</span><span class="pl-c1">True</span>):
+    <span class="pl-k">if</span> uniform:
+        init_range <span class="pl-k">=</span> tf.sqrt(<span class="pl-c1">6.0</span> <span class="pl-k">/</span> (n_inputs <span class="pl-k">+</span> n_outputs))
+        <span class="pl-k">return</span> tf.random_uniform_initializer(<span class="pl-k">-</span>init_range, init_range)
+    <span class="pl-k">else</span>:
+        stddev <span class="pl-k">=</span> tf.sqrt(<span class="pl-c1">3.0</span> <span class="pl-k">/</span> (n_inputs <span class="pl-k">+</span> n_outputs))
+        <span class="pl-k">return</span> tf.truncated_normal_initializer(<span class="pl-v">stddev</span><span class="pl-k">=</span>stddev)
+
+<span class="pl-c"># Bias initialization</span>
+<span class="pl-k">def</span> <span class="pl-en">bias_variable</span>(<span class="pl-smi">shape</span>):
+    initial <span class="pl-k">=</span> tf.constant(<span class="pl-c1">0.1</span>, <span class="pl-v">shape</span><span class="pl-k">=</span>shape)
+    <span class="pl-k">return</span> tf.Variable(initial)</pre></div>
+
+<p>Using above functions, we make two convolutional layers, and two fully connected layers.</p>
+
+<div class="highlight highlight-source-python"><pre><span class="pl-c"># Model Parameters</span>
+<span class="pl-c1">W1</span> <span class="pl-k">=</span> tf.get_variable(<span class="pl-s"><span class="pl-pds">"</span>W1<span class="pl-pds">"</span></span>, <span class="pl-v">shape</span><span class="pl-k">=</span>[<span class="pl-c1">5</span>, <span class="pl-c1">5</span>, <span class="pl-c1">1</span>, <span class="pl-c1">32</span>], <span class="pl-v">initializer</span><span class="pl-k">=</span>weight_xavier_init(<span class="pl-c1">5</span><span class="pl-k">*</span><span class="pl-c1">5</span><span class="pl-k">*</span><span class="pl-c1">1</span>, <span class="pl-c1">32</span>))
+<span class="pl-c1">W2</span> <span class="pl-k">=</span> tf.get_variable(<span class="pl-s"><span class="pl-pds">"</span>W2<span class="pl-pds">"</span></span>, <span class="pl-v">shape</span><span class="pl-k">=</span>[<span class="pl-c1">5</span>, <span class="pl-c1">5</span>, <span class="pl-c1">32</span>, <span class="pl-c1">64</span>], <span class="pl-v">initializer</span><span class="pl-k">=</span>weight_xavier_init(<span class="pl-c1">5</span><span class="pl-k">*</span><span class="pl-c1">5</span><span class="pl-k">*</span><span class="pl-c1">32</span>, <span class="pl-c1">64</span>))
+<span class="pl-c1">W3_FC1</span> <span class="pl-k">=</span> tf.get_variable(<span class="pl-s"><span class="pl-pds">"</span>W3_FC1<span class="pl-pds">"</span></span>, <span class="pl-v">shape</span><span class="pl-k">=</span>[<span class="pl-c1">64</span><span class="pl-k">*</span><span class="pl-c1">7</span><span class="pl-k">*</span><span class="pl-c1">7</span>, <span class="pl-c1">1024</span>], <span class="pl-v">initializer</span><span class="pl-k">=</span>weight_xavier_init(<span class="pl-c1">64</span><span class="pl-k">*</span><span class="pl-c1">7</span><span class="pl-k">*</span><span class="pl-c1">7</span>, <span class="pl-c1">1024</span>))
+<span class="pl-c1">W4_FC2</span> <span class="pl-k">=</span> tf.get_variable(<span class="pl-s"><span class="pl-pds">"</span>W4_FC2<span class="pl-pds">"</span></span>, <span class="pl-v">shape</span><span class="pl-k">=</span>[<span class="pl-c1">1024</span>, labels_count], <span class="pl-v">initializer</span><span class="pl-k">=</span>weight_xavier_init(<span class="pl-c1">1024</span>, labels_count))
+
+<span class="pl-c1">B1</span> <span class="pl-k">=</span> bias_variable([<span class="pl-c1">32</span>])
+<span class="pl-c1">B2</span> <span class="pl-k">=</span> bias_variable([<span class="pl-c1">64</span>])
+<span class="pl-c1">B3_FC1</span> <span class="pl-k">=</span> bias_variable([<span class="pl-c1">1024</span>])
+<span class="pl-c1">B4_FC2</span> <span class="pl-k">=</span> bias_variable([labels_count])
+
+drop_conv <span class="pl-k">=</span> tf.placeholder(<span class="pl-s"><span class="pl-pds">'</span>float<span class="pl-pds">'</span></span>)
+drop_hidden <span class="pl-k">=</span> tf.placeholder(<span class="pl-s"><span class="pl-pds">'</span>float<span class="pl-pds">'</span></span>)</pre></div>
+
+<h3>
+<a id="model-description" class="anchor" href="#model-description" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Model description</h3>
+
+<p>At first, we transform from 1D input vector into 2D image. 
+For the convolutional layer, we apply three steps:
+1. Convolution
+2. Max-pooling
+3. Dropout</p>
+
+<p>For the fully connected layer, the process is same with basic neural network.</p>
+
+<div class="highlight highlight-source-python"><pre><span class="pl-c"># CNN model</span>
+<span class="pl-c1">X1</span> <span class="pl-k">=</span> tf.reshape(<span class="pl-c1">X</span>, [<span class="pl-k">-</span><span class="pl-c1">1</span>,image_width , image_height,<span class="pl-c1">1</span>])                   <span class="pl-c"># shape=(?, 28, 28, 1)</span>
+
+<span class="pl-c"># Layer 1</span>
+l1_conv <span class="pl-k">=</span> tf.nn.relu(conv2d(<span class="pl-c1">X1</span>, <span class="pl-c1">W1</span>) <span class="pl-k">+</span> <span class="pl-c1">B1</span>)                               <span class="pl-c"># shape=(?, 28, 28, 32)</span>
+l1_pool <span class="pl-k">=</span> max_pool_2x2(l1_conv)                                         <span class="pl-c"># shape=(?, 14, 14, 32)</span>
+l1_drop <span class="pl-k">=</span> tf.nn.dropout(l1_pool, drop_conv)
+
+<span class="pl-c"># Layer 2</span>
+l2_conv <span class="pl-k">=</span> tf.nn.relu(conv2d(l1_drop, <span class="pl-c1">W2</span>)<span class="pl-k">+</span> <span class="pl-c1">B2</span>)                           <span class="pl-c"># shape=(?, 14, 14, 64)</span>
+l2_pool <span class="pl-k">=</span> max_pool_2x2(l2_conv)                                         <span class="pl-c"># shape=(?, 7, 7, 64)</span>
+l2_drop <span class="pl-k">=</span> tf.nn.dropout(l2_pool, drop_conv) 
+
+<span class="pl-c"># Layer 3 - FC1</span>
+l3_flat <span class="pl-k">=</span> tf.reshape(l2_drop, [<span class="pl-k">-</span><span class="pl-c1">1</span>, <span class="pl-c1">W3_FC1</span>.get_shape().as_list()[<span class="pl-c1">0</span>]])    <span class="pl-c"># shape=(?, 1024)</span>
+l3_feed <span class="pl-k">=</span> tf.nn.relu(tf.matmul(l3_flat, <span class="pl-c1">W3_FC1</span>)<span class="pl-k">+</span> <span class="pl-c1">B3_FC1</span>) 
+l3_drop <span class="pl-k">=</span> tf.nn.dropout(l3_feed, drop_hidden)
+
+
+<span class="pl-c"># Layer 4 - FC2</span>
+<span class="pl-c1">Y_pred</span> <span class="pl-k">=</span> tf.nn.softmax(tf.matmul(l3_drop, <span class="pl-c1">W4_FC2</span>)<span class="pl-k">+</span> <span class="pl-c1">B4_FC2</span>)              <span class="pl-c"># shape=(?, 10)</span></pre></div>
+
+<h3>
+<a id="cost-function-and-training" class="anchor" href="#cost-function-and-training" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>Cost function and Training</h3>
+
+<p>We define cross-entropy for the cost function.
+And penalize using L2-regularization.</p>
+
+<div class="highlight highlight-source-python"><pre><span class="pl-c"># Cost function and training </span>
+cost <span class="pl-k">=</span> <span class="pl-k">-</span>tf.reduce_sum(<span class="pl-c1">Y_gt</span><span class="pl-k">*</span>tf.log(<span class="pl-c1">Y_pred</span>))
+regularizer <span class="pl-k">=</span> (tf.nn.l2_loss(<span class="pl-c1">W3_FC1</span>) <span class="pl-k">+</span> tf.nn.l2_loss(<span class="pl-c1">B3_FC1</span>) <span class="pl-k">+</span> tf.nn.l2_loss(<span class="pl-c1">W4_FC2</span>) <span class="pl-k">+</span> tf.nn.l2_loss(<span class="pl-c1">B4_FC2</span>))
+cost <span class="pl-k">+=</span> <span class="pl-c1">5e-4</span> <span class="pl-k">*</span> regularizer
+
+<span class="pl-c">#train_op = tf.train.AdamOptimizer(LEARNING_RATE).minimize(cost)</span>
+train_op <span class="pl-k">=</span> tf.train.RMSPropOptimizer(<span class="pl-c1">LEARNING_RATE</span>, <span class="pl-c1">0.9</span>).minimize(cost)
+correct_predict <span class="pl-k">=</span> tf.equal(tf.argmax(<span class="pl-c1">Y_pred</span>, <span class="pl-c1">1</span>), tf.argmax(<span class="pl-c1">Y_gt</span>, <span class="pl-c1">1</span>))
+accuracy <span class="pl-k">=</span> tf.reduce_mean(tf.cast(correct_predict, <span class="pl-s"><span class="pl-pds">'</span>float<span class="pl-pds">'</span></span>))
+predict <span class="pl-k">=</span> tf.argmax(<span class="pl-c1">Y_pred</span>, <span class="pl-c1">1</span>)</pre></div>
+
+<h3>
+<a id="tensorflow-session" class="anchor" href="#tensorflow-session" aria-hidden="true"><span aria-hidden="true" class="octicon octicon-link"></span></a>TensorFlow session</h3>
+
+<div class="highlight highlight-source-python"><pre>epochs_completed <span class="pl-k">=</span> <span class="pl-c1">0</span>
+index_in_epoch <span class="pl-k">=</span> <span class="pl-c1">0</span>
+num_examples <span class="pl-k">=</span> train_images.shape[<span class="pl-c1">0</span>]
+
+<span class="pl-c"># start TensorFlow session</span>
+init <span class="pl-k">=</span> tf.initialize_all_variables()
+sess <span class="pl-k">=</span> tf.InteractiveSession()
+
+sess.run(init)
+
+<span class="pl-c"># visualisation variables</span>
+train_accuracies <span class="pl-k">=</span> []
+validation_accuracies <span class="pl-k">=</span> []
+
+<span class="pl-c1">DISPLAY_STEP</span><span class="pl-k">=</span><span class="pl-c1">1</span>
+
+<span class="pl-k">for</span> i <span class="pl-k">in</span> <span class="pl-c1">range</span>(<span class="pl-c1">TRAINING_EPOCHS</span>):
+
+    <span class="pl-c">#get new batch</span>
+    batch_xs, batch_ys <span class="pl-k">=</span> next_batch(<span class="pl-c1">BATCH_SIZE</span>)        
+
+    <span class="pl-c"># check progress on every 1st,2nd,...,10th,20th,...,100th... step</span>
+    <span class="pl-k">if</span> i<span class="pl-k">%</span><span class="pl-c1">DISPLAY_STEP</span> <span class="pl-k">==</span> <span class="pl-c1">0</span> <span class="pl-k">or</span> (i<span class="pl-k">+</span><span class="pl-c1">1</span>) <span class="pl-k">==</span> <span class="pl-c1">TRAINING_EPOCHS</span>:
+
+        train_accuracy <span class="pl-k">=</span> accuracy.eval(<span class="pl-v">feed_dict</span><span class="pl-k">=</span>{<span class="pl-c1">X</span>:batch_xs, 
+                                                  <span class="pl-c1">Y_gt</span>: batch_ys,
+                                                  drop_conv: <span class="pl-c1">DROPOUT_CONV</span>, 
+                                                  drop_hidden: <span class="pl-c1">DROPOUT_HIDDEN</span>})       
+        <span class="pl-k">if</span>(<span class="pl-c1">VALIDATION_SIZE</span>):
+            validation_accuracy <span class="pl-k">=</span> accuracy.eval(<span class="pl-v">feed_dict</span><span class="pl-k">=</span>{ <span class="pl-c1">X</span>: validation_images[<span class="pl-c1">0</span>:<span class="pl-c1">BATCH_SIZE</span>], 
+                                                            <span class="pl-c1">Y_gt</span>: validation_labels[<span class="pl-c1">0</span>:<span class="pl-c1">BATCH_SIZE</span>],
+                                                            drop_conv: <span class="pl-c1">DROPOUT_CONV</span>, drop_hidden: <span class="pl-c1">DROPOUT_HIDDEN</span>})                                  
+            <span class="pl-c1">print</span>(<span class="pl-s"><span class="pl-pds">'</span>training_accuracy / validation_accuracy =&gt; <span class="pl-c1">%.2f</span> / <span class="pl-c1">%.2f</span> for step <span class="pl-c1">%d</span><span class="pl-pds">'</span></span><span class="pl-k">%</span>(train_accuracy, validation_accuracy, i))
+
+            validation_accuracies.append(validation_accuracy)
+
+        <span class="pl-k">else</span>:
+             <span class="pl-c1">print</span>(<span class="pl-s"><span class="pl-pds">'</span>training_accuracy =&gt; <span class="pl-c1">%.4f</span> for step <span class="pl-c1">%d</span><span class="pl-pds">'</span></span><span class="pl-k">%</span>(train_accuracy, i))
+        train_accuracies.append(train_accuracy)
+
+        <span class="pl-c"># increase DISPLAY_STEP</span>
+        <span class="pl-k">if</span> i<span class="pl-k">%</span>(<span class="pl-c1">DISPLAY_STEP</span><span class="pl-k">*</span><span class="pl-c1">10</span>) <span class="pl-k">==</span> <span class="pl-c1">0</span> <span class="pl-k">and</span> i:
+            <span class="pl-c1">DISPLAY_STEP</span> <span class="pl-k">*=</span> <span class="pl-c1">10</span>
+    <span class="pl-c"># train on batch</span>
+    sess.run(train_op, <span class="pl-v">feed_dict</span><span class="pl-k">=</span>{<span class="pl-c1">X</span>: batch_xs, <span class="pl-c1">Y_gt</span>: batch_ys, drop_conv: <span class="pl-c1">DROPOUT_CONV</span>, drop_hidden: <span class="pl-c1">DROPOUT_HIDDEN</span>})
+
+
+<span class="pl-c"># check final accuracy on validation set  </span>
+<span class="pl-k">if</span>(<span class="pl-c1">VALIDATION_SIZE</span>):
+    validation_accuracy <span class="pl-k">=</span> accuracy.eval(<span class="pl-v">feed_dict</span><span class="pl-k">=</span>{<span class="pl-c1">X</span>: validation_images, 
+                                                   <span class="pl-c1">Y_gt</span>: validation_labels,
+                                                   drop_conv: <span class="pl-c1">DROPOUT_CONV</span>, drop_hidden: <span class="pl-c1">DROPOUT_HIDDEN</span>})
+    <span class="pl-c1">print</span>(<span class="pl-s"><span class="pl-pds">'</span>validation_accuracy =&gt; <span class="pl-c1">%.4f</span><span class="pl-pds">'</span></span><span class="pl-k">%</span>validation_accuracy)
+
+<span class="pl-c"># read test data from CSV file </span>
+test_images <span class="pl-k">=</span> pd.read_csv(<span class="pl-s"><span class="pl-pds">'</span>./input/test.csv<span class="pl-pds">'</span></span>).values
+test_images <span class="pl-k">=</span> test_images.astype(np.float)
+
+<span class="pl-c"># convert from [0:255] =&gt; [0.0:1.0]</span>
+test_images <span class="pl-k">=</span> np.multiply(test_images, <span class="pl-c1">1.0</span> <span class="pl-k">/</span> <span class="pl-c1">255.0</span>)
+
+<span class="pl-c1">print</span>(<span class="pl-s"><span class="pl-pds">'</span>test_images(<span class="pl-c1">{0[0]}</span>,<span class="pl-c1">{0[1]}</span>)<span class="pl-pds">'</span></span>.format(test_images.shape))
+
+
+<span class="pl-c"># predict test set</span>
+<span class="pl-c">#predicted_lables = predict.eval(feed_dict={X: test_images, keep_prob: 1.0})</span>
+
+<span class="pl-c"># using batches is more resource efficient</span>
+predicted_lables <span class="pl-k">=</span> np.zeros(test_images.shape[<span class="pl-c1">0</span>])
+<span class="pl-k">for</span> i <span class="pl-k">in</span> <span class="pl-c1">range</span>(<span class="pl-c1">0</span>,test_images.shape[<span class="pl-c1">0</span>]<span class="pl-k">//</span><span class="pl-c1">BATCH_SIZE</span>):
+    predicted_lables[i<span class="pl-k">*</span><span class="pl-c1">BATCH_SIZE</span> : (i<span class="pl-k">+</span><span class="pl-c1">1</span>)<span class="pl-k">*</span><span class="pl-c1">BATCH_SIZE</span>] <span class="pl-k">=</span> predict.eval(<span class="pl-v">feed_dict</span><span class="pl-k">=</span>{<span class="pl-c1">X</span>: test_images[i<span class="pl-k">*</span><span class="pl-c1">BATCH_SIZE</span> : (i<span class="pl-k">+</span><span class="pl-c1">1</span>)<span class="pl-k">*</span><span class="pl-c1">BATCH_SIZE</span>], drop_conv: <span class="pl-c1">1.0</span>, drop_hidden: <span class="pl-c1">1.0</span>})
+
+
+<span class="pl-c"># save results</span>
+np.savetxt(<span class="pl-s"><span class="pl-pds">'</span>submission.csv<span class="pl-pds">'</span></span>, 
+           np.c_[<span class="pl-c1">range</span>(<span class="pl-c1">1</span>,<span class="pl-c1">len</span>(test_images)<span class="pl-k">+</span><span class="pl-c1">1</span>),predicted_lables], 
+           <span class="pl-v">delimiter</span><span class="pl-k">=</span><span class="pl-s"><span class="pl-pds">'</span>,<span class="pl-pds">'</span></span>, 
+           <span class="pl-v">header</span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">'</span>ImageId,Label<span class="pl-pds">'</span></span>, 
+           <span class="pl-v">comments</span> <span class="pl-k">=</span> <span class="pl-s"><span class="pl-pds">'</span><span class="pl-pds">'</span></span>, 
+           <span class="pl-v">fmt</span><span class="pl-k">=</span><span class="pl-s"><span class="pl-pds">'</span><span class="pl-c1">%d</span><span class="pl-pds">'</span></span>)
+
+sess.close()</pre></div>
 
       <footer class="site-footer">
         <span class="site-footer-owner"><a href="https://github.com/tgjeon/kaggle_MNIST">Classifying MNIST digits using Convolutional Neural Networks</a> is maintained by <a href="https://github.com/tgjeon">tgjeon</a>.</span>
